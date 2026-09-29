@@ -199,6 +199,115 @@ document.getElementById('payModal').addEventListener('click',function(e){
   if(e.target===this) closePay();
 });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<script>
+const SUPABASE_URL = "https://ludbftxkjccmpynssfpq.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-FuDXUSHbopHJZcZGm1rRg_SWyTcW3h";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Keep the original preview images as fallbacks when image_url is empty in Supabase.
+const fallbackImages = {};
+document.querySelectorAll('#products article.card').forEach(card => {
+  const name = card.querySelector('h3')?.textContent.trim().toUpperCase();
+  const img = card.querySelector('img');
+  if (name && img) fallbackImages[name] = img.src;
+});
+
+function escHTML(v){
+  return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function productCard(p){
+  const name = p.name || 'Product';
+  const price = Number(p.price || 0);
+  const stock = p.in_stock !== false;
+  const key = name.toUpperCase();
+  const image = p.image_url || fallbackImages[key] || '';
+  const imageHTML = image
+    ? `<img class="pic" src="${escHTML(image)}" alt="${escHTML(name)}">`
+    : `<div style="height:230px;display:grid;place-items:center;background:#080808;border-radius:11px;font-size:52px">🛒</div>`;
+  if (!stock) {
+    return `<article class="card">${imageHTML}<h3>${escHTML(name)}</h3><div class="desc">${escHTML(p.description || 'This product is currently unavailable.')}</div><div class="price" style="color:#888">NOT IN STOCK</div><button class="buy" disabled style="background:#333;color:#777;cursor:not-allowed">NOT IN STOCK</button></article>`;
+  }
+  return `<article class="card">${imageHTML}<h3>${escHTML(name)}</h3><div class="desc">${escHTML(p.description || '')}</div><div class="price">₹${price}</div><button class="buy" onclick="openPay(${JSON.stringify(name)},${price})">BUY NOW</button></article>`;
+}
+
+async function loadStoreFromSupabase(){
+  try {
+    const [productsRes, servicesRes, settingsRes] = await Promise.all([
+      supabaseClient.from('Products').select('*').order('id'),
+      supabaseClient.from('Services').select('*').order('id'),
+      supabaseClient.from('store_settings').select('*').eq('id',1).maybeSingle()
+    ]);
+
+    if (productsRes.error) throw productsRes.error;
+    if (servicesRes.error) throw servicesRes.error;
+
+    // PRODUCTS
+    const productsSection = document.getElementById('products');
+    const productGrid = productsSection?.querySelector('.grid');
+    if (productGrid) {
+      productGrid.innerHTML = (productsRes.data || []).map(productCard).join('');
+    }
+    const comboBox = productsSection?.querySelector('.combo');
+    if (comboBox) comboBox.remove();
+
+    // SERVICES
+    const serviceSection = document.getElementById('services');
+    if (serviceSection) {
+      const services = servicesRes.data || [];
+      const active = services.filter(s => s.active !== false);
+      const videos = active.filter(s => String(s.category).toLowerCase() === 'video');
+      const photos = active.filter(s => String(s.category).toLowerCase() === 'photo');
+      const rows = arr => arr.map(s => `<div class="row"><span>${escHTML(s.name)}</span><b>₹${Number(s.price || 0)}</b></div>`).join('');
+      serviceSection.innerHTML = `
+        <h2>EDITING SERVICES</h2>
+        <div class="prices">${rows(videos)}</div>
+        <h2 style="margin-top:55px">PHOTO EDITING SERVICES</h2>
+        <div class="prices">${rows(photos)}</div>`;
+    }
+
+    // SITE SETTINGS
+    if (!settingsRes.error && settingsRes.data) {
+      const st = settingsRes.data;
+      document.title = `${st.site_name || 'HXRSHH STORE'} • Premium Editing & Gaming Store`;
+      const logo = document.querySelector('.logo');
+      if (logo && st.site_name) {
+        const parts = String(st.site_name).split(/\s+/);
+        const first = parts.shift() || '';
+        logo.innerHTML = `${escHTML(first)} <span>${escHTML(parts.join(' '))}</span>`;
+      }
+      const heroTitle = document.querySelector('.hero h1');
+      if (heroTitle && st.site_name) {
+        const parts = String(st.site_name).split(/\s+/);
+        const first = parts.shift() || '';
+        heroTitle.innerHTML = `${escHTML(first)} <span>${escHTML(parts.join(' '))}</span>`;
+      }
+      const heroDesc = document.querySelector('.hero p');
+      if (heroDesc && st.hero_description) heroDesc.textContent = st.hero_description;
+      if (st.accent_color) document.documentElement.style.setProperty('--red', st.accent_color);
+      if (st.bg_color) document.body.style.background = st.bg_color;
+      if (st.card_color) document.documentElement.style.setProperty('--card', st.card_color);
+      const footer = document.querySelector('footer');
+      if (footer && st.footer_text) footer.textContent = st.footer_text;
+      const wa = String(st.whatsapp || '').replace(/\D/g,'');
+      if (wa) {
+        document.querySelectorAll('a[href*="wa.me"]').forEach(a => {
+          const base = a.href.split('?')[0];
+          if (base.includes('wa.me/')) a.href = `https://wa.me/91${wa}`;
+        });
+      }
+    }
+
+    console.log('HXRSHH STORE synced with Supabase:', productsRes.data);
+  } catch (error) {
+    console.error('Supabase sync error:', error);
+  }
+}
+
+loadStoreFromSupabase();
+</script>
+</script>
 </body>
 </html>
