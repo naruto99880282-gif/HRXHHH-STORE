@@ -249,11 +249,25 @@ function productCard(p){
 
 async function loadStoreFromSupabase(){
   try {
-    const [productsRes, servicesRes, settingsRes] = await Promise.all([
+    const [productsRes, servicesRes] = await Promise.all([
       supabaseClient.from('Products').select('*').order('id'),
-      supabaseClient.from('Services').select('*').order('id'),
-      supabaseClient.from('store_settings').select('*').eq('id',1).maybeSingle()
+      supabaseClient.from('Services').select('*').order('id')
     ]);
+
+    let settingsRes = await supabaseClient
+      .from('store_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle();
+
+    if (settingsRes.error) {
+      await new Promise(r => setTimeout(r, 500));
+      settingsRes = await supabaseClient
+        .from('store_settings')
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+    }
 
     if (productsRes.error) throw productsRes.error;
     if (servicesRes.error) throw servicesRes.error;
