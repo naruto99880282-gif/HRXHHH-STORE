@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>HXRSHH STORE</title>
 <style>
 :root{--bg:#050505;--card:#101010;--line:#242424;--red:#ff174f;--muted:#a5a5a5}
@@ -204,7 +207,18 @@ document.getElementById('payModal').addEventListener('click',function(e){
 <script>
 const SUPABASE_URL = "https://ludbftxkjccmpynssfpq.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-FuDXUSHbopHJZcZGm1rRg_SWyTcW3h";
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    global: {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
+      }
+    }
+  }
+);
 
 // Keep the original preview images as fallbacks when image_url is empty in Supabase.
 const fallbackImages = {};
@@ -272,35 +286,55 @@ async function loadStoreFromSupabase(){
     if (!settingsRes.error && settingsRes.data) {
       const st = settingsRes.data;
       window.STORE_WHATSAPP = String(st.whatsapp || '').replace(/\D/g,'') || '6393525090';
-      document.title = `${st.site_name || 'HXRSHH STORE'} • Premium Editing & Gaming Store`;
+
+      // Apply ALL site settings from Supabase to the live page.
+      const siteName = String(st.site_name || 'HXRSHH STORE').trim();
+      document.title = `${siteName} • Premium Editing & Gaming Store`;
+
       const logo = document.querySelector('.logo');
-      if (logo && st.site_name) {
-        const parts = String(st.site_name).split(/\s+/);
-        const first = parts.shift() || '';
-        logo.innerHTML = `${escHTML(first)} <span>${escHTML(parts.join(' '))}</span>`;
-      }
       const heroTitle = document.querySelector('.hero h1');
-      if (heroTitle && st.site_name) {
-        const parts = String(st.site_name).split(/\s+/);
-        const first = parts.shift() || '';
-        heroTitle.innerHTML = `${escHTML(first)} <span>${escHTML(parts.join(' '))}</span>`;
-      }
+      const nameParts = siteName.split(/\s+/);
+      const firstNamePart = nameParts.shift() || '';
+      const restNameParts = nameParts.join(' ');
+      const styledName = `${escHTML(firstNamePart)}${restNameParts ? ` <span>${escHTML(restNameParts)}</span>` : ''}`;
+
+      if (logo) logo.innerHTML = styledName;
+      if (heroTitle) heroTitle.innerHTML = styledName;
+
       const heroDesc = document.querySelector('.hero p');
-      if (heroDesc && st.hero_description) heroDesc.textContent = st.hero_description;
-      if (st.accent_color) document.documentElement.style.setProperty('--red', st.accent_color);
-      if (st.bg_color) { document.documentElement.style.setProperty('--bg', st.bg_color); document.body.style.background = st.bg_color; }
-      if (st.card_color) { document.documentElement.style.setProperty('--card', st.card_color); document.querySelectorAll('.card').forEach(c => c.style.background = st.card_color); }
-      const footer = document.querySelector('footer');
-      if (footer && st.footer_text) footer.textContent = st.footer_text;
-      const wa = window.STORE_WHATSAPP;
-      if (wa) {
-        const display = document.getElementById('waDisplay');
-        if (display) display.textContent = wa;
-        document.querySelectorAll('a[href*="wa.me"]').forEach(a => {
-          const base = a.href.split('?')[0];
-          if (base.includes('wa.me/')) a.href = `https://wa.me/91${wa}`;
+      if (heroDesc) heroDesc.textContent = String(st.hero_description || '');
+
+      if (st.accent_color) {
+        document.documentElement.style.setProperty('--red', st.accent_color);
+      }
+      if (st.bg_color) {
+        document.documentElement.style.setProperty('--bg', st.bg_color);
+        document.body.style.backgroundColor = st.bg_color;
+      }
+      if (st.card_color) {
+        document.documentElement.style.setProperty('--card', st.card_color);
+        document.querySelectorAll('.card').forEach(c => {
+          c.style.background = st.card_color;
         });
       }
+
+      const footer = document.querySelector('footer');
+      if (footer) footer.textContent = String(st.footer_text || '');
+
+      const wa = window.STORE_WHATSAPP;
+      document.querySelectorAll('#waDisplay').forEach(el => {
+        el.textContent = wa;
+      });
+      document.querySelectorAll('.contact a[href*="wa.me"]').forEach(a => {
+        a.href = `https://wa.me/91${wa}`;
+        a.textContent = `WHATSAPP: ${wa}`;
+      });
+      document.querySelectorAll('a[href*="wa.me"]').forEach(a => {
+        if (!a.closest('.contact')) {
+          const base = a.href.split('?')[0];
+          if (base.includes('wa.me/')) a.href = `https://wa.me/91${wa}`;
+        }
+      });
     }
 
     console.log('HXRSHH STORE synced with Supabase:', productsRes.data);
@@ -310,7 +344,6 @@ async function loadStoreFromSupabase(){
 }
 
 loadStoreFromSupabase();
-</script>
 </script>
 </body>
 </html>
