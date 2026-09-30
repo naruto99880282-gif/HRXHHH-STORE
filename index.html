@@ -43,8 +43,14 @@ footer{text-align:center;color:#666;padding:28px;border-top:1px solid #151515}
 @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){nav{display:none}.grid{grid-template-columns:1fr}.pic{height:230px}}
 </style>
+<style data-store-settings-pending>
+body.store-settings-pending .logo,
+body.store-settings-pending .hero h1,
+body.store-settings-pending .hero p,
+body.store-settings-pending footer { visibility:hidden; }
+</style>
 </head>
-<body>
+<body class="store-settings-pending">
 
 <header>
   <div class="logo">HXRSHH <span>STORE</span></div>
@@ -351,8 +357,10 @@ async function loadStoreFromSupabase(){
       });
     }
 
+    document.body.classList.remove('store-settings-pending');
     console.log('HXRSHH STORE synced with Supabase:', productsRes.data);
   } catch (error) {
+    document.body.classList.remove('store-settings-pending');
     console.error('Supabase sync error:', error);
   }
 }
