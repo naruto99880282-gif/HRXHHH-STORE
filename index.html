@@ -170,38 +170,28 @@ footer{text-align:center;color:#666;padding:28px;border-top:1px solid #151515}
 </div>
 
 <script>
-async function openPay(name, price){
+function openPay(name, price){
   document.getElementById('productName').textContent=name;
   document.getElementById('productPrice').textContent=price;
   document.getElementById('payModal').classList.add('show');
-  try {
-    const { data, error } = await supabaseClient.from('store_settings').select('qr_url').eq('id',1).maybeSingle();
-    if (!error && data && data.qr_url) {
-      const qr = document.getElementById('paymentQR');
-      if (qr) qr.src = data.qr_url + (data.qr_url.includes('?') ? '&' : '?') + 'v=' + Date.now();
-    }
-  } catch (e) { console.error('QR load error:', e); }
+  const qr = document.getElementById('paymentQR');
+  if (qr && window.STORE_QR) {
+    qr.src = window.STORE_QR + (window.STORE_QR.includes('?') ? '&' : '?') + 'v=' + Date.now();
+  }
 }
 function closePay(){
   document.getElementById('payModal').classList.remove('show');
   document.getElementById('paymentStep').style.display='block';
   document.getElementById('verifyStep').style.display='none';
 }
-
 function showVerification(){
   document.getElementById('paymentStep').style.display='none';
   document.getElementById('verifyStep').style.display='block';
-
   const name = document.getElementById('productName').textContent;
   const price = document.getElementById('productPrice').textContent;
-  const msg = encodeURIComponent(
-    'Hello HXRSHH STORE, I have paid ₹' + price +
-    ' for ' + name + '. I am sending my payment screenshot for verification.'
-  );
-  document.getElementById('whatsappBtn').href =
-    'https://wa.me/91' + (window.STORE_WHATSAPP || '6393525090') + '?text=' + msg;
+  const msg = encodeURIComponent('Hello HXRSHH STORE, I have paid ₹' + price + ' for ' + name + '. I am sending my payment screenshot for verification.');
+  document.getElementById('whatsappBtn').href = 'https://wa.me/91' + (window.STORE_WHATSAPP || '6393525090') + '?text=' + msg;
 }
-
 document.getElementById('payModal').addEventListener('click',function(e){
   if(e.target===this) closePay();
 });
@@ -278,6 +268,7 @@ async function loadStoreFromSupabase(){
     // SITE SETTINGS
     if (!settingsRes.error && settingsRes.data) {
       const st = settingsRes.data;
+      window.STORE_QR = String(st.qr_url || '');
       window.STORE_WHATSAPP = String(st.whatsapp || '').replace(/\D/g,'') || '6393525090';
       document.title = `${st.site_name || 'HXRSHH STORE'} • Premium Editing & Gaming Store`;
       const logo = document.querySelector('.logo');
@@ -317,7 +308,6 @@ async function loadStoreFromSupabase(){
 }
 
 loadStoreFromSupabase();
-</script>
 </script>
 </body>
 </html>
