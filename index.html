@@ -170,35 +170,17 @@ footer{text-align:center;color:#666;padding:28px;border-top:1px solid #151515}
 </div>
 
 <script>
-async function refreshPaymentQR(){
-  const qr = document.getElementById('paymentQR');
-  if (!qr) return;
-  try {
-    const { data, error } = await supabaseClient
-      .from('store_settings')
-      .select('qr_url,whatsapp')
-      .eq('id', 1)
-      .maybeSingle();
-    if (error) throw error;
-    if (data && data.qr_url) {
-      qr.src = data.qr_url + (data.qr_url.includes('?') ? '&' : '?') + 'v=' + Date.now();
-    }
-    if (data && data.whatsapp) {
-      const wa = String(data.whatsapp).replace(/\D/g,'');
-      window.STORE_WHATSAPP = wa;
-      const display = document.getElementById('waDisplay');
-      if (display) display.textContent = wa;
-    }
-  } catch (e) {
-    console.error('QR refresh error:', e);
-  }
-}
-
-function openPay(name, price){
+async function openPay(name, price){
   document.getElementById('productName').textContent=name;
   document.getElementById('productPrice').textContent=price;
   document.getElementById('payModal').classList.add('show');
-  refreshPaymentQR();
+  try {
+    const { data, error } = await supabaseClient.from('store_settings').select('qr_url').eq('id',1).maybeSingle();
+    if (!error && data && data.qr_url) {
+      const qr = document.getElementById('paymentQR');
+      if (qr) qr.src = data.qr_url + (data.qr_url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+    }
+  } catch (e) { console.error('QR load error:', e); }
 }
 function closePay(){
   document.getElementById('payModal').classList.remove('show');
@@ -296,8 +278,6 @@ async function loadStoreFromSupabase(){
     // SITE SETTINGS
     if (!settingsRes.error && settingsRes.data) {
       const st = settingsRes.data;
-      const paymentQR = document.getElementById("paymentQR");
-      if (paymentQR && st.qr_url) { paymentQR.src = st.qr_url + (st.qr_url.includes('?') ? '&' : '?') + 'v=' + Date.now(); }
       window.STORE_WHATSAPP = String(st.whatsapp || '').replace(/\D/g,'') || '6393525090';
       document.title = `${st.site_name || 'HXRSHH STORE'} • Premium Editing & Gaming Store`;
       const logo = document.querySelector('.logo');
